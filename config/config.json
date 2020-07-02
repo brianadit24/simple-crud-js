@@ -1,0 +1,25 @@
+{
+  "development": {
+    "username": "VDfM2yjpdl",
+    "password": "eZQ9TafAas",
+    "database": "VDfM2yjpdl",
+    "host": "remotemysql.com",
+    "dialect": "mysql",
+    "port": "3306"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "database_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "VDfM2yjpdl",
+    "password": "eZQ9TafAas",
+    "database": "VDfM2yjpdl",
+    "host": "remotemysql.com",
+    "dialect": "mysql",
+    "port": "3306"
+  }
+}
