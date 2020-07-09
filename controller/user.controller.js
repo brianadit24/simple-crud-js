@@ -1,121 +1,130 @@
-const model = require('../models')
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
+const model = require('../models');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-function createUser(req, res){
-    let salt = bcrypt.genSaltSync(10)
-    let hash = bcrypt.hashSync(req.body.password, salt)
+async function createUser(req, res) {
+  const {
+    name,
+    label,
+    picture,
+    email,
+    phone,
+    website,
+    summary,
+    password,
+  } = req.body;
+  const salt = await bcrypt.genSalt(12);
+  const hash = await bcrypt.hash(password, salt);
 
-    model.User.create({
-        name: req.body.name,
-        label: req.body.label,
-        picture: req.body.picture,
-        email: req.body.email,
-        phone: req.body.phone,
-        website: req.body.website,
-        summary: req.body.summary,
-        password: hash,
-    })
-    .then( function(result){
-        res.json(result)
-    })
-    .catch( function(error){
-        res.json({error: error})
-    })
+  try {
+    const user = model.User.create({
+      name,
+      label,
+      picture,
+      email,
+      phone,
+      website,
+      summary,
+      password: hash,
+    });
+    res.json(user);
+  } catch (error) {
+    res.json({ error });
+  }
 }
-function readUser(req, res){
-    model.User.findAll()
-    .then( function(result){
-        res.json(result)
-    })
-    .catch( function(error){
-        res.json({error:error})
-    })
+
+async function readUser(req, res) {
+  try {
+    const user = await model.User.findAll();
+    res.json(user);
+  } catch (error) {
+    res.json({ error });
+  }
 }
-function updateUser(req, res){
-    let decodedId = req.decoded.id;
-    if(Number(decodedId) === Number(req.params.id)){
-        // let salt = bcrypt.genSaltSync(10)
-        // let hash = bcrypt.hashSync(req.body.password, salt)
-        model.User.update({
-            name: req.body.name,
-            label: req.body.label,
-            picture: req.body.picture,
-            email: req.body.email,
-            phone: req.body.phone,
-            website: req.body.website,
-            summary: req.body.summary,
-            // password: hash,
-        },{
-            where: {
-                id: req.params.id
-            }
-        })
-        .then( function(result){
-            res.json(result)
-        })
-        .catch( function(error){
-            res.json({error: error})
-        })
-    } else {
-        res.json({
-            message: 'Ini bukan data Anda'
-        })
+
+async function updateUser(req, res) {
+  const { name, label, picture, email, phone, website, summary } = req.body;
+  const decodedId = req.decoded.id;
+  try {
+    const isValidUser = Number(decodedId) === Number(req.params.id);
+
+    if (!isValidUser) {
+      throw new Error('Ini bukan data anda');
     }
-}
-function deleteUser(req, res){
-    let decodedId =  req.decoded.id
-    if(Number(decodedId) === Number(req.params.id)){
-        model.User.destroy({
-            where: {
-                id: req.params.id
-            }
-        })
-        .then( function(result){
-            res.json(result)
-        })
-        .catch( function(error){
-            res.json({error: error})
-        })
-    } else{
-        res.json({
-            message : 'Ini bukan data Anda'
-        })
-    }
-}
-function loginUser(req, res){
-    const email = req.body.email
-    const password = req.body.password
 
-    model.User.findOne({
+    const user = await model.User.update(
+      {
+        name,
+        label,
+        picture,
+        email,
+        phone,
+        website,
+        summary,
+        // password: hash,
+      },
+      {
         where: {
-            email: email
-        }
-    })
-    .then( function(result){
-        let passwordHash = result.password;
-        let checkPassword = bcrypt.compareSync(password, passwordHash);
+          id: req.params.id,
+        },
+        returning: true,
+        plain: true,
+      }
+    );
+    res.json(`Berhasil menghapus user dengan id ${user}`);
+  } catch (error) {
+    res.json({ error });
+  }
+}
 
-        if(checkPassword){
-            res.json({
-                message: 'Berhasil Login',
-                token: jwt.sign({id: result.id}, 'Brian-Dev')
-            })
-        } else{
-            res.json({
-                message: 'Gagal Login'
-            })
-        }
-    })
-    .catch(  function(error){
-        res.json({error: error})
-    })
+async function deleteUser(req, res) {
+  const decodedId = req.decoded.id;
+  try {
+    const isValidUser = Number(decodedId) === Number(req.params.id);
+    if (!isValidUser) {
+      throw new Error('Ini bukan data anda');
+    }
+    const user = await model.User.destroy({
+      where: {
+        id: req.params.id,
+      },
+    });
+    res.json(`Berhasil menghapus user dengan id ${user}`);
+  } catch (error) {
+    res.json({ error });
+  }
+}
+
+async function loginUser(req, res) {
+  const { email, password } = req.body;
+  try {
+    const user = await model.User.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Email atau password salah');
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      throw new Error('Email atau password salah');
+    }
+    res.json({
+      message: 'Berhasil login',
+      token: jwt.sign({ id: user.id }, 'Brian-Dev'),
+    });
+  } catch (error) {
+    res.json(error);
+  }
 }
 
 module.exports = {
-    createUser,
-    readUser,
-    updateUser,
-    deleteUser,
-    loginUser,
-}
+  createUser,
+  readUser,
+  updateUser,
+  deleteUser,
+  loginUser,
+};
